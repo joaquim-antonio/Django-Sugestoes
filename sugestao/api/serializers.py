@@ -55,6 +55,13 @@ class SugestaoOutputSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class HistoricoTrechoOutputSerializer(serializers.Serializer):
+    """Texto original do trecho e todas as sugestões associadas."""
+    trecho_id = serializers.IntegerField()
+    texto_original = serializers.CharField(allow_blank=True)
+    sugestoes = SugestaoOutputSerializer(many=True)
+
+
 class ArtigoHTMLOutputSerializer(serializers.Serializer):
     """
     Formatador para o HTML compilado do artigo.
@@ -77,4 +84,4 @@ class VersaoArtigoOutputSerializer(serializers.ModelSerializer):
             "conteudo",
             "criada_em",
         )
-        read_only_fields = fields   
+        read_only_fields = fields

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.urls import reverse
@@ -52,31 +53,36 @@ class SugestaoViewsAPITestCase(APITestCase):
     # --- 2. Testes de GET /api/trechos/<id>/sugestoes/ ---
 
     def test_listar_historico_sugestoes_retorna_200(self):
-        now = timezone.now()
-        Sugestao.objects.create(
+        antiga = Sugestao.objects.create(
             trecho=self.trecho,
             texto="S1",
             status=Sugestao.Status.REJEITADA,
-            decidida_em=now,
+            decidida_em=timezone.now() - timedelta(days=2),
         )
-        Sugestao.objects.create(
+        recente = Sugestao.objects.create(
             trecho=self.trecho,
             texto="S2",
             status=Sugestao.Status.SUBSTITUIDA,
-            decidida_em=now,
+            decidida_em=timezone.now() - timedelta(days=1),
         )
+        pendente = Sugestao.objects.create(trecho=self.trecho, texto="S3")
 
         url = reverse("trecho-sugestoes", kwargs={"trecho_id": self.trecho.id})
-        response = self.client.get(url)
+        response = self.client.get(f"{url}?status=rejeitada")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data["trecho_id"], self.trecho.id)
+        self.assertEqual(response.data["texto_original"], self.trecho.texto)
+        self.assertEqual(
+            [sugestao["id"] for sugestao in response.data["sugestoes"]],
+            [pendente.id, recente.id, antiga.id],
+        )
 
-    def test_listar_historico_com_filtro_status_invalido_retorna_400(self):
+    def test_listar_historico_ignora_parametro_status(self):
         url = reverse("trecho-sugestoes", kwargs={"trecho_id": self.trecho.id})
         response = self.client.get(f"{url}?status=status_inexistente")
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     # --- 3. Testes de POST /api/sugestoes/<id>/decisao/ ---
 

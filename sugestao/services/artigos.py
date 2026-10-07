@@ -1,14 +1,11 @@
 from html import escape
 
-from django.db import IntegrityError, transaction
 from django.db.models import F, OuterRef, Subquery, TextField
 from django.db.models.functions import Coalesce
-from django.utils import timezone
 
-from sugestao.models import Artigo, Sugestao, Trecho
+from sugestao.models import Artigo, Sugestao
 
-ACOES = ("aceitar", "rejeitar")
-STATUS_DO_HISTORICO = ("substituida", "rejeitada")
+from .exceptions import NaoEncontrado
 
 
 def montar_artigo_html(artigo_id):
@@ -31,7 +28,11 @@ def montar_artigo_html(artigo_id):
         )
         .order_by("secoes__posicao", "secoes__trechos__posicao")
         .values_list(
-            "titulo", "secoes__id", "secoes__nome", "secoes__trechos__id", "texto_vigente"
+            "titulo",
+            "secoes__id",
+            "secoes__nome",
+            "secoes__trechos__id",
+            "texto_vigente",
         )
     )
     if not linhas:
@@ -45,8 +46,9 @@ def montar_artigo_html(artigo_id):
         if secao_id != secao_atual:
             partes.append(f"<h2>{escape(secao_nome)}</h2>")
             secao_atual = secao_id
-        if trecho_id is None or not texto.strip():  # seção sem trechos ou trecho apagado
+        if (
+            trecho_id is None or not texto.strip()
+        ):  # seção sem trechos ou trecho apagado
             continue
         partes.append(f"<p>{escape(texto)}</p>")
-    return "\n".join(partes)
-
+    return "".join(partes)

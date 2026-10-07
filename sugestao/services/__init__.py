@@ -7,17 +7,16 @@ from .artigos import montar_artigo_html
 from .exceptions import Conflito, ErroDeValidacao, NaoEncontrado
 from .sugestoes import (
     ACOES,
-    STATUS_DO_HISTORICO,
     criar_sugestao,
     decidir,
     listar_historico,
     obter_aceita,
     obter_pendente,
+    restaurar_original,
 )
 
 __all__ = [
     "ACOES",
-    "STATUS_DO_HISTORICO",
     "Conflito",
     "ErroDeValidacao",
     "NaoEncontrado",
@@ -27,4 +26,5 @@ __all__ = [
     "montar_artigo_html",
     "obter_aceita",
     "obter_pendente",
+    "restaurar_original",
 ]

@@ -1,16 +1,17 @@
-from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from sugestao.models import VersaoArtigo
 from sugestao.api.serializers import (
     ArtigoHTMLOutputSerializer,
     CriarSugestaoSerializer,
     DecidirSugestaoSerializer,
+    HistoricoTrechoOutputSerializer,
     SugestaoOutputSerializer,
     VersaoArtigoOutputSerializer,
 )
+from sugestao.models import VersaoArtigo
 from sugestao.services import (
     Conflito,
     ErroDeValidacao,
@@ -19,6 +20,7 @@ from sugestao.services import (
     decidir,
     listar_historico,
     montar_artigo_html,
+    restaurar_original,
 )
 from sugestao.tasks import gerar_versao
 
@@ -26,7 +28,7 @@ from sugestao.tasks import gerar_versao
 class CriarListarSugestaoView(APIView):
     """
     POST /api/trechos/<id>/sugestoes/ -> Cria uma nova sugestão pendente.
-    GET  /api/trechos/<id>/sugestoes/ -> Lista o histórico do trecho (aceitas/rejeitadas/substituídas/pendentes).
+    GET  /api/trechos/<id>/sugestoes/ -> Lista o texto original e todas as sugestões do trecho.
     """
 
     @extend_schema(
@@ -63,34 +65,21 @@ class CriarListarSugestaoView(APIView):
 
     @extend_schema(
         summary="Listar Histórico de Sugestões",
-        description="Recupera o histórico de sugestões do trecho (substituídas/rejeitadas).",
-        parameters=[
-            OpenApiParameter(
-                name="status",
-                description="Filtrar por status do histórico: 'rejeitada' ou 'substituida'",
-                required=False,
-                type=str,
-            )
-        ],
+        description="Recupera o texto original do trecho e todas as sugestões, da mais recente para a mais antiga.",
         responses={
-            200: SugestaoOutputSerializer(many=True),
-            400: OpenApiResponse(description="Filtro de status inválido."),
+            200: HistoricoTrechoOutputSerializer,
             404: OpenApiResponse(description="Trecho não encontrado."),
         },
     )
     def get(self, request, trecho_id: int):
-        status_filtro = request.query_params.get("status")
-
         try:
-            sugestoes = listar_historico(trecho_id=trecho_id, status=status_filtro)
+            historico = listar_historico(trecho_id=trecho_id)
             return Response(
-                SugestaoOutputSerializer(sugestoes, many=True).data,
+                HistoricoTrechoOutputSerializer(historico).data,
                 status=status.HTTP_200_OK,
             )
         except NaoEncontrado as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
-        except (ErroDeValidacao, ValueError) as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)   
 
 
 class DecidirSugestaoView(APIView):
@@ -129,6 +118,34 @@ class DecidirSugestaoView(APIView):
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
         except ErroDeValidacao as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RestaurarOriginalTrechoView(APIView):
+    """POST /api/trechos/<id>/restaurar-original/ -> Restaura o texto original."""
+
+    @extend_schema(
+        summary="Restaurar Texto Original do Trecho",
+        description=(
+            "Marca como substituída a sugestão atualmente aceita. "
+            "O artigo volta a usar o texto original do trecho."
+        ),
+        responses={
+            200: SugestaoOutputSerializer,
+            404: OpenApiResponse(description="Trecho não encontrado."),
+            409: OpenApiResponse(description="O trecho já está usando o texto original."),
+        },
+    )
+    def post(self, request, trecho_id: int):
+        try:
+            sugestao = restaurar_original(trecho_id)
+            return Response(
+                SugestaoOutputSerializer(sugestao).data,
+                status=status.HTTP_200_OK,
+            )
+        except NaoEncontrado as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        except Conflito as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
 
 
 class ObterArtigoMontadoView(APIView):

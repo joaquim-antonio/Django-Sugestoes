@@ -173,33 +173,25 @@ class LeiturasTest(TestCase):
                 with self.assertRaisesMessage(NaoEncontrado, "Trecho não encontrado"):
                     leitura(self.trecho.id + 1000)
 
-    def test_historico_traz_so_substituidas_e_rejeitadas_da_mais_recente_para_a_mais_antiga(self):
+    def test_historico_traz_todas_as_sugestoes_da_mais_recente_para_a_mais_antiga(self):
         antiga = criar_sugestao(self.trecho, "substituida", dias_atras=5)
         recente = criar_sugestao(self.trecho, "rejeitada", dias_atras=1)
         meio = criar_sugestao(self.trecho, "rejeitada", dias_atras=3)
-        criar_sugestao(self.trecho, "aceita")
-        criar_sugestao(self.trecho, "pendente")
+        aceita = criar_sugestao(self.trecho, "aceita")
+        pendente = criar_sugestao(self.trecho, "pendente")
 
         historico = services.listar_historico(self.trecho.id)
 
-        self.assertEqual([s.pk for s in historico], [recente.pk, meio.pk, antiga.pk])
-
-    def test_historico_filtra_por_status(self):
-        substituida = criar_sugestao(self.trecho, "substituida")
-        rejeitada = criar_sugestao(self.trecho, "rejeitada")
-        self.assertEqual([s.pk for s in services.listar_historico(self.trecho.id, "substituida")], [substituida.pk])
-        self.assertEqual([s.pk for s in services.listar_historico(self.trecho.id, "rejeitada")], [rejeitada.pk])
-
-    def test_historico_so_aceita_status_de_historico(self):
-        for invalido in ("pendente", "aceita", "qualquer"):
-            with self.subTest(status=invalido):
-                with self.assertRaises(ErroDeValidacao):
-                    services.listar_historico(self.trecho.id, invalido)
+        self.assertEqual(historico["texto_original"], self.trecho.texto)
+        self.assertEqual(
+            [s.pk for s in historico["sugestoes"]],
+            [pendente.pk, aceita.pk, meio.pk, recente.pk, antiga.pk],
+        )
 
     def test_historico_nao_mistura_trechos(self):
         outro = criar_trecho(self.trecho.secao, posicao=2)
         criar_sugestao(outro, "rejeitada")
-        self.assertEqual(services.listar_historico(self.trecho.id), [])
+        self.assertEqual(services.listar_historico(self.trecho.id)["sugestoes"], [])
 
     def test_historico_de_trecho_inexistente(self):
         with self.assertRaises(NaoEncontrado):

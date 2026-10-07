@@ -5,6 +5,7 @@ from sugestao.api.views import (
     CriarListarVersaoArtigoView,
     DecidirSugestaoView,
     ObterArtigoMontadoView,
+    RestaurarOriginalTrechoView,
 )
 
 urlpatterns = [
@@ -18,6 +19,11 @@ urlpatterns = [
         "sugestoes/<int:sugestao_id>/decisao/",
         DecidirSugestaoView.as_view(),
         name="sugestao-decisao",
+    ),
+    path(
+        "trechos/<int:trecho_id>/restaurar-original/",
+        RestaurarOriginalTrechoView.as_view(),
+        name="trecho-restaurar-original",
     ),
     # Rotas de Artigos e Versões
     path(
