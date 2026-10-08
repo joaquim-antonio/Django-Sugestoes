@@ -1,20 +1,12 @@
 # API de sugestões de artigos
 
-Backend Django REST Framework para gerenciar artigos, seções, trechos e sugestões de revisão. Sugestões podem ser aceitas ou rejeitadas; o artigo pode ser montado em HTML e snapshots são gerados em segundo plano com Celery.
-
-## Tecnologias
-
-- Python 3.12 e Django 6.1
-- Django REST Framework e drf-spectacular (OpenAPI, Swagger UI e Redoc)
-- PostgreSQL 16
-- Celery com Redis 7 como broker
-- Docker Compose para executar banco, broker, aplicação e worker
+Backend Django REST Framework para gerenciar artigos, seções, trechos e sugestões de revisão. Sugestões podem ser aceitas ou rejeitadas; o artigo pode ser montado em HTML e snapshots são gerados em segundo plano com Celery. As decisões estão registradas em [Decisões.md](./docs/Decisoes.md)
 
 ## Configuração local
 
 Copie `.env.example` para `.env` para executar com Docker Compose. Não use a chave de exemplo em produção. Se executar Django fora do Compose, ajuste `DATABASE_URL` para apontar para `localhost` e `CELERY_BROKER_URL` para `redis://localhost:6379/0`.
 
-Crie e ative um ambiente virtual e instale as dependências:
+### Execução sem Docker Compose
 
 ```bash
 python -m venv .venv
@@ -42,7 +34,7 @@ python manage.py runserver
 celery -A config worker --loglevel=info
 ```
 
-## Execução com Docker Compose
+### Execução com Docker Compose
 
 O Compose inicia banco, Redis, servidor Django e worker:
 
@@ -56,27 +48,22 @@ O serviço `web` aplica as migrações ao iniciar. Para criar dados demonstrativ
 docker compose exec web python manage.py seed
 ```
 
-## API e documentação
+## Testar a API pelo Swagger
 
-- API: `http://localhost:8000/api/`
-- Schema OpenAPI: `http://localhost:8000/api/schema/`
-- Swagger UI: `http://localhost:8000/api/schema/swagger-ui/`
-- Redoc: `http://localhost:8000/api/schema/redoc/`
+Com a aplicação em execução via Docker Compose ou `runserver`, abra o [Swagger UI](http://localhost:8000/api/schema/swagger-ui/). Expanda uma rota, clique em **Try it out**, informe os parâmetros ou o corpo JSON e clique em **Execute** para enviar a requisição e ver a resposta.
 
-Rotas principais:
-
-- `POST` e `GET /api/trechos/<trecho_id>/sugestoes/`
-- `POST /api/sugestoes/<sugestao_id>/decisao/`
-- `GET /api/artigos/<artigo_id>/`
-- `POST` e `GET /api/artigos/<artigo_id>/versoes/`
+O schema OpenAPI está disponível em `http://localhost:8000/api/schema/`; a documentação alternativa do Redoc fica em `http://localhost:8000/api/schema/redoc/`.
 
 ## Testes e verificações
 
-Execute os testes com:
+Execute os testes e gere o relatório de cobertura do código da aplicação (excluindo testes e migrações):
 
 ```bash
-python manage.py test
+coverage run --source=sugestao --omit='*/tests/*,*/migrations/*' manage.py test
+coverage report
 ```
+
+A última medição local registrou **88% de cobertura de linhas** no código da aplicação. Essa execução usou SQLite temporário porque o PostgreSQL não estava disponível e a suíte não passou nesse backend (19 falhas e 3 erros em 71 testes); portanto, considere o percentual provisório e rode a medição com PostgreSQL para obter um resultado validado.
 
 Verifique configuração e consistência das migrações com:
 
@@ -84,7 +71,3 @@ Verifique configuração e consistência das migrações com:
 python manage.py check
 python manage.py makemigrations --check --dry-run
 ```
-
-## Dependências
-
-`requirements.txt` contém as dependências de runtime e desenvolvimento, incluindo versões transitivas fixadas para tornar as instalações mais reproduzíveis. Ao atualizar pacotes, atualize esse arquivo e valide a instalação, os testes e o funcionamento da aplicação.
