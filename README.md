@@ -48,14 +48,10 @@ O serviço `web` aplica as migrações ao iniciar. Para criar dados demonstrativ
 docker compose exec web python manage.py seed
 ```
 
-## Testar a API pelo Swagger
-
+### Testar a API pelo Swagger
 Com a aplicação em execução via Docker Compose ou `runserver`, abra o [Swagger UI](http://localhost:8000/api/schema/swagger-ui/). Expanda uma rota, clique em **Try it out**, informe os parâmetros ou o corpo JSON e clique em **Execute** para enviar a requisição e ver a resposta.
 
-O schema OpenAPI está disponível em `http://localhost:8000/api/schema/`; a documentação alternativa do Redoc fica em `http://localhost:8000/api/schema/redoc/`.
-
-## Testes e verificações
-
+### Testes e verificações
 Execute os testes e gere o relatório de cobertura do código da aplicação (excluindo testes e migrações):
 
 ```bash
